@@ -17,7 +17,7 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 # Cargar imágenes
-door_sprites = [pygame.image.load(f"Assets/puerta{i}.png") for i in range(1,6)]  # Cambia los nombres según tus imágenes
+door_sprites = [pygame.image.load(f"Assets/puerta{i}.png") for i in range(1, 6)]
 car_image = pygame.image.load("Assets/vehiculo.png")
 goat_image = pygame.image.load("Assets/cabra.png")
 
@@ -37,7 +37,7 @@ random.shuffle(prizes)
 selected_door = None
 revealed_door = None
 final_choice = None
-game_state = "select"  # "select", "reveal", "decision", "end"
+game_state = "select"  # "select", "reveal", "decision", "waiting", "end"
 
 
 # Clase para la animación de la puerta
@@ -49,28 +49,44 @@ class Door:
         self.animation_index = 0
         self.is_opening = False
         self.is_open = False
+        self.is_fading = False
+        self.has_faded = False  # Nuevo estado para controlar el final del desvanecimiento
         self.opacity = 255  # Inicialmente la puerta está completamente visible
+        self.animation_timer = 0  # Controlar el tiempo entre cuadros
 
     def draw(self, surface):
-        # Dibujar la puerta con opacidad si está desvaneciéndose
-        if self.is_opening:
-            if self.opacity > 0:
-                self.opacity -= 10  # Reducir la opacidad para crear el efecto de desvanecimiento
-            else:
-                self.is_open = True
-                self.opacity = 255  # Restablecer opacidad para la imagen del premio
+        # Animación de apertura
+        if self.is_opening and not self.is_open:
+            self.animation_timer += 1
+            if self.animation_timer >= 5:  # Cambiar de cuadro cada 5 ticks
+                self.animation_timer = 0
+                self.animation_index += 1
+                if self.animation_index >= len(door_sprites):  # Animación completa
+                    self.is_open = True
+                    self.is_fading = True
+                    self.animation_index = len(door_sprites) - 1  # Fijar en el último cuadro
 
-        if not self.is_open:
-            # Dibuja la puerta con opacidad
+        # Efecto de desvanecimiento
+        if self.is_fading:
+            self.opacity -= 5  # Reducir opacidad gradualmente
+            if self.opacity <= 0:
+                self.opacity = 0
+                self.is_fading = False
+                self.has_faded = True  # Marcar que el desvanecimiento ha terminado
+
+        # Dibujar la puerta o el premio
+        if not self.has_faded:  # Mientras no haya terminado el desvanecimiento
             door_with_opacity = self.set_opacity(door_sprites[self.animation_index])
             surface.blit(door_with_opacity, (self.x, self.y))
         else:
-            # Si la puerta está abierta, se dibuja el premio
+            # Dibujar el premio cuando el desvanecimiento ha terminado
             prize_image = car_image if prizes[self.door_index] == "car" else goat_image
             surface.blit(prize_image, (self.x + 50, self.y + 200))
 
     def open(self):
-        self.is_opening = True
+        # Comenzar la animación solo si la puerta no está completamente abierta
+        if not self.is_open:
+            self.is_opening = True
 
     def set_opacity(self, image):
         # Crear una nueva superficie con la misma imagen pero con transparencia (opacidad)
@@ -106,12 +122,14 @@ while running:
                 # Botón "Mantener"
                 if 200 < event.pos[0] < 350 and 500 < event.pos[1] < 550:
                     final_choice = selected_door
-                    game_state = "end"
+                    door_objects[final_choice].open()
+                    game_state = "waiting"  # Nuevo estado para esperar la animación
 
                 # Botón "Cambiar"
                 if 450 < event.pos[0] < 600 and 500 < event.pos[1] < 550:
                     final_choice = [door for door in doors if door != selected_door and door != revealed_door][0]
-                    game_state = "end"
+                    door_objects[final_choice].open()
+                    game_state = "waiting"  # Nuevo estado para esperar la animación
 
     # Lógica del juego
     if game_state == "reveal" and revealed_door is None:
@@ -122,6 +140,11 @@ while running:
                 door_objects[i].open()
                 break
         game_state = "decision"
+
+    if game_state == "waiting":
+        # Verifica si la puerta seleccionada terminó de abrirse
+        if door_objects[final_choice].has_faded:
+            game_state = "end"
 
     # Dibujar puertas
     for door in door_objects:
@@ -149,15 +172,6 @@ while running:
     # Mostrar texto
     text = font.render(message, True, BLACK)
     screen.blit(text, (50, 50))
-
-    # Mostrar el resultado final
-    if game_state == "end":
-        for i, door in enumerate(door_objects):
-            if door.is_open:
-                if prizes[i] == "car":
-                    screen.blit(car_image, (door.x + 50, door.y + 200))
-                else:
-                    screen.blit(goat_image, (door.x + 50, door.y + 200))
 
     pygame.display.flip()
     clock.tick(30)
