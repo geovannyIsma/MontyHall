@@ -1,4 +1,3 @@
-
 class Door:
     def __init__(self, x, y, door_index, door_sprites, car_image, goat_image, prizes):
         self.x = x

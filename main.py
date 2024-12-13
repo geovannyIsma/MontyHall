@@ -5,7 +5,7 @@ from utils import reset_game
 pygame.init()
 
 # Configuración de la pantalla
-WIDTH, HEIGHT = 1080, 720
+WIDTH, HEIGHT = 1500, 720
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Monty Hall Game")
 
@@ -16,6 +16,7 @@ BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 GRAY = (44, 44, 44)
+YELLOW = (255, 255, 0)
 
 # Cargar imágenes
 background_image = pygame.image.load("Assets/sprites/escenario1.jpg")
@@ -40,18 +41,27 @@ stats_font = pygame.font.SysFont("Arial", 20, bold=True)
 
 PRIZE_SOUND = pygame.USEREVENT + 1
 
-# Variables del juego
-doors = [0, 1, 2]
-door_positions = [(100, 170), (415, 170), (730, 170)]
-door_objects, prizes = reset_game(door_positions, door_sprites, car_image, goat_image)
+# Niveles de dificultad
+difficulty_levels = {
+    "easy": {"num_doors": 3, "time_limit": 15},
+    "medium": {"num_doors": 4, "time_limit": 10},
+    "hard": {"num_doors": 5, "time_limit": 5},
+}
 
-INDICATOR_COLOR = (0,0, 255)
+# Variables del juego
+selected_level = None
+game_state = "select_level"
+doors = []
+door_positions = []
+door_objects = []
+prizes = []
+
+INDICATOR_COLOR = (0, 0, 255)
 INDICATOR_WIDTH = 2
 
 selected_door = None
 revealed_door = None
 final_choice = None
-game_state = "select"
 
 # Variables de estadísticas
 wins = 0
@@ -63,6 +73,7 @@ timer_limit = 10  # 10 segundos para tomar una decisión
 
 # Cargar una fuente personalizada
 timer_font = pygame.font.Font("Assets/fonts/digital-7 (mono italic).ttf", 30)
+
 # Bucle principal
 clock = pygame.time.Clock()
 running = True
@@ -75,10 +86,24 @@ while running:
             running = False
 
         if event.type == pygame.MOUSEBUTTONDOWN:
-            click_sound.play()
+            if game_state == "select_level":
+                if easy_button.collidepoint(event.pos):
+                    selected_level = "easy"
+                elif medium_button.collidepoint(event.pos):
+                    selected_level = "medium"
+                elif hard_button.collidepoint(event.pos):
+                    selected_level = "hard"
+                if selected_level:
+                    num_doors = difficulty_levels[selected_level]["num_doors"]
+                    timer_limit = difficulty_levels[selected_level]["time_limit"]
+                    door_positions = [(25 + i * 300, 170) for i in range(num_doors)]
+                    door_objects, prizes = reset_game(door_positions, door_sprites, car_image, goat_image)
+                    game_state = "select"
+
             if game_state == "select":
                 for door in door_objects:
                     if door.x < event.pos[0] < door.x + 250 and door.y < event.pos[1] < door.y + 375:
+                        click_sound.play()
                         selected_door = door.door_index
                         game_state = "reveal"
                         timer_start = pygame.time.get_ticks()  # Iniciar temporizador
@@ -90,10 +115,19 @@ while running:
                     door_objects[final_choice].open()
                     game_state = "waiting"
 
-                if change_button_x < event.pos[0] < change_button_x + button_width and button_y < event.pos[1] < button_y + button_height:
-                    final_choice = [door for door in doors if door != selected_door and door != revealed_door][0]
-                    door_objects[final_choice].open()
-                    game_state = "waiting"
+                if change_button_x < event.pos[0] < change_button_x + button_width and button_y < event.pos[
+                    1] < button_y + button_height:
+                    game_state = "change"
+
+            elif game_state == "change":
+                for door in door_objects:
+                    if door.x < event.pos[0] < door.x + 250 and door.y < event.pos[1] < door.y + 375:
+                        if door.door_index != selected_door and not door.is_open:
+                            click_sound.play()
+                            final_choice = door.door_index
+                            door_objects[final_choice].open()
+                            game_state = "waiting"
+                            break
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_r and game_state == "end":
@@ -102,6 +136,8 @@ while running:
                 revealed_door = None
                 final_choice = None
                 game_state = "select"
+            elif event.key == pygame.K_x:
+                running = False
 
         if event.type == PRIZE_SOUND:
             if prizes[revealed_door] == "car":
@@ -154,6 +190,15 @@ while running:
         selected_door_obj = door_objects[selected_door]
         pygame.draw.rect(screen, INDICATOR_COLOR, (selected_door_obj.x - INDICATOR_WIDTH, selected_door_obj.y - INDICATOR_WIDTH, 250 + 2 * INDICATOR_WIDTH, 375 + 2 * INDICATOR_WIDTH), INDICATOR_WIDTH)
 
+    if game_state == "select_level":
+        easy_button = pygame.draw.rect(screen, GREEN, (50, 50, 200, 50))
+        medium_button = pygame.draw.rect(screen, YELLOW, (300, 50, 200, 50))
+        hard_button = pygame.draw.rect(screen, RED, (550, 50, 200, 50))
+        screen.blit(font.render("Facil", True, BLACK), (100, 60))
+        screen.blit(font.render("Medio", True, BLACK), (350, 60))
+        screen.blit(font.render("Dificil", True, BLACK), (600, 60))
+        message = ""
+
     if game_state == "select":
         message = "Selecciona una puerta haciendo clic en ella."
     elif game_state == "reveal":
@@ -179,7 +224,7 @@ while running:
         else:
             message = "Lo siento, obtuviste una cabra."
         door_objects[final_choice].open()
-        message += " Presiona 'r' para jugar de nuevo."
+        message += " Presiona 'r' para jugar de nuevo y 'x' para salir."
 
     text = font.render(message, True, WHITE)
     screen.blit(text, (50, 50))
