@@ -35,6 +35,10 @@ click_sound = pygame.mixer.Sound("Assets/songs/mixkit-creaky-door-open-195.wav")
 win_sound = pygame.mixer.Sound("Assets/songs/sfx-victory1.mp3")
 lose_sound = pygame.mixer.Sound("Assets/songs/mixkit-goat-single-baa-1760.wav")
 
+click_sound.set_volume(0.3)  # 50% del volumen máximo
+win_sound.set_volume(0.3)    # 50% del volumen máximo
+lose_sound.set_volume(0.3)   # 50% del volumen máximo
+
 # Fuente para texto
 font = pygame.font.SysFont("Arial", 24)
 stats_font = pygame.font.SysFont("Arial", 20, bold=True)
