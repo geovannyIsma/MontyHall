@@ -147,11 +147,14 @@ while running:
             pygame.time.set_timer(PRIZE_SOUND, 0)
 
     if game_state == "reveal" and revealed_door is None:
+        revealed_doors = []
         for i, prize in enumerate(prizes):
             if i != selected_door and prize == "goat":
-                revealed_door = i
+                revealed_doors.append(i)
                 door_objects[i].open()
-                break
+                if len(revealed_doors) == len(door_objects) - 2:
+                    break
+        revealed_door = revealed_doors[0]  # Solo para mantener la lógica existente
         pygame.time.set_timer(PRIZE_SOUND, 2500)
         game_state = "decision"
 
@@ -194,9 +197,9 @@ while running:
         easy_button = pygame.draw.rect(screen, GREEN, (50, 50, 200, 50))
         medium_button = pygame.draw.rect(screen, YELLOW, (300, 50, 200, 50))
         hard_button = pygame.draw.rect(screen, RED, (550, 50, 200, 50))
-        screen.blit(font.render("Facil", True, BLACK), (100, 60))
-        screen.blit(font.render("Medio", True, BLACK), (350, 60))
-        screen.blit(font.render("Dificil", True, BLACK), (600, 60))
+        screen.blit(font.render("3 Puertas", True, BLACK), (100, 60))
+        screen.blit(font.render("4 Puertas", True, BLACK), (350, 60))
+        screen.blit(font.render("5 Puertas", True, BLACK), (600, 60))
         message = ""
 
     if game_state == "select":
