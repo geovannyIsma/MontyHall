@@ -39,7 +39,7 @@ class Door:
             surface.blit(door_with_opacity, (self.x, self.y))
         else:
             prize_image = self.car_image if self.prizes[self.door_index] == "car" else self.goat_image
-            surface.blit(prize_image, (self.x + 75, self.y + 200))
+            surface.blit(prize_image, (self.x + 50, self.y + 200))
 
     def open(self):
         if not self.is_open:

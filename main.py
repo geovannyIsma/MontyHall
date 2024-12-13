@@ -15,12 +15,13 @@ BLACK = (0, 0, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
+GRAY = (44, 44, 44)
 
 # Cargar imágenes
-background_image = pygame.image.load("Assets/escenario1.jpg")
-door_sprites = [pygame.image.load(f"Assets/puerta{i}.png") for i in range(1, 6)]
-car_image = pygame.image.load("Assets/vehiculo.png")
-goat_image = pygame.image.load("Assets/cabra.png")
+background_image = pygame.image.load("Assets/sprites/escenario1.jpg")
+door_sprites = [pygame.image.load(f"Assets/sprites/puerta{i}.png") for i in range(1, 6)]
+car_image = pygame.image.load("Assets/sprites/vehiculo.png")
+goat_image = pygame.image.load("Assets/sprites/cabra.png")
 
 # Escalado de imágenes
 background_image = pygame.transform.scale(background_image, (WIDTH, HEIGHT))
@@ -29,9 +30,9 @@ car_image = pygame.transform.scale(car_image, (150, 150))
 goat_image = pygame.transform.scale(goat_image, (150, 150))
 
 # Cargar sonidos
-click_sound = pygame.mixer.Sound("Assets/mixkit-creaky-door-open-195.wav")
-win_sound = pygame.mixer.Sound("Assets/sfx-victory1.mp3")
-lose_sound = pygame.mixer.Sound("Assets/mixkit-goat-single-baa-1760.wav")
+click_sound = pygame.mixer.Sound("Assets/songs/mixkit-creaky-door-open-195.wav")
+win_sound = pygame.mixer.Sound("Assets/songs/sfx-victory1.mp3")
+lose_sound = pygame.mixer.Sound("Assets/songs/mixkit-goat-single-baa-1760.wav")
 
 # Fuente para texto
 font = pygame.font.SysFont("Arial", 24)
@@ -45,8 +46,7 @@ door_positions = [(100, 170), (415, 170), (730, 170)]
 door_objects, prizes = reset_game(door_positions, door_sprites, car_image, goat_image)
 
 INDICATOR_COLOR = (0,0, 255)
-INDICATOR_WIDTH = 3
-
+INDICATOR_WIDTH = 2
 
 selected_door = None
 revealed_door = None
@@ -57,6 +57,12 @@ game_state = "select"
 wins = 0
 losses = 0
 
+# Variables del temporizador
+timer_start = 0
+timer_limit = 10  # 10 segundos para tomar una decisión
+
+# Cargar una fuente personalizada
+timer_font = pygame.font.Font("Assets/fonts/digital-7 (mono italic).ttf", 30)
 # Bucle principal
 clock = pygame.time.Clock()
 running = True
@@ -75,6 +81,7 @@ while running:
                     if door.x < event.pos[0] < door.x + 250 and door.y < event.pos[1] < door.y + 375:
                         selected_door = door.door_index
                         game_state = "reveal"
+                        timer_start = pygame.time.get_ticks()  # Iniciar temporizador
                         break
 
             elif game_state == "decision":
@@ -121,6 +128,24 @@ while running:
             else:
                 losses += 1
                 lose_sound.play()
+
+    if game_state == "decision":
+        elapsed_time = (pygame.time.get_ticks() - timer_start) / 1000
+        if elapsed_time > timer_limit:
+            final_choice = selected_door
+            door_objects[final_choice].open()
+            game_state = "waiting"
+        else:
+            remaining_time = timer_limit - elapsed_time
+            timer_text = timer_font.render(f"{remaining_time:.1f}s", True, RED)
+
+            # Calcula las dimensiones y la posición del rectángulo
+            timer_rect = timer_text.get_rect(topleft=(WIDTH - 100, 50))
+            timer_rect.inflate_ip(15, 15)  # Añade un margen alrededor del texto
+
+            pygame.draw.rect(screen, GRAY, timer_rect)
+
+            screen.blit(timer_text, (WIDTH - 100, 50))
 
     for door in door_objects:
         door.draw(screen)
